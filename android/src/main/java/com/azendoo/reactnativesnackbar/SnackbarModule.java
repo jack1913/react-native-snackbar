@@ -89,6 +89,9 @@ public class SnackbarModule extends ReactContextBaseJavaModule{
         int duration = options.hasKey("duration") ? options.getInt("duration") : Snackbar.LENGTH_SHORT;
 
         Snackbar snackbar = Snackbar.make(view, title, duration);
+        View snackbarView = snackbar.getView();
+        TextView textView = (TextView) snackbarView.findViewById(android.support.design.R.id.snackbar_text);
+        textView.setMaxLines(4);
         mActiveSnackbars.add(snackbar);
 
         // Set the background color.
