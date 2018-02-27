@@ -90,8 +90,8 @@ public class SnackbarModule extends ReactContextBaseJavaModule{
 
         Snackbar snackbar = Snackbar.make(view, title, duration);
         View snackbarView = snackbar.getView();
-        TextView textView = (TextView) snackbarView.findViewById(android.support.design.R.id.snackbar_text);
-        textView.setMaxLines(4);
+        TextView snackbarText = (TextView) snackbarView.findViewById(android.support.design.R.id.snackbar_text);
+        snackbarText.setMaxLines(4);
         mActiveSnackbars.add(snackbar);
 
         // Set the background color.
@@ -121,8 +121,6 @@ public class SnackbarModule extends ReactContextBaseJavaModule{
         // For older devices, explicitly set the text color; otherwise it may appear dark gray.
         // http://stackoverflow.com/a/31084530/763231
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-            View snackbarView = snackbar.getView();
-            TextView snackbarText = (TextView) snackbarView.findViewById(android.support.design.R.id.snackbar_text);
             snackbarText.setTextColor(Color.WHITE);
         }
 
