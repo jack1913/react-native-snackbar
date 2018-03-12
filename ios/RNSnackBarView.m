@@ -69,7 +69,10 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
 
 - (instancetype)init
 {
+
     self = [super initWithFrame:CGRectMake(0, [UIScreen mainScreen].bounds.size.height - 48, [UIScreen mainScreen].bounds.size.width, 48)];
+    //self = [super initWithFrame:CGRectMake(0, [UIScreen mainScreen].bounds.size.height, [UIScreen mainScreen].bounds.size.width, 48)];
+
     if (self) {
         [self buildView];
     }
@@ -89,13 +92,13 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
 
     self.backgroundColor = [UIColor colorWithRed:0.196078F green:0.196078F blue:0.196078F alpha:1.0F];
     self.accessibilityIdentifier = @"snackbar";
-  
+
     titleLabel = [UILabel new];
-    titleLabel.text = _title;
-    titleLabel.numberOfLines = 4;
+    titleLabel.numberOfLines = 0;
     titleLabel.textColor = [UIColor whiteColor];
     titleLabel.font = [UIFont boldSystemFontOfSize:14];
     [titleLabel setTranslatesAutoresizingMaskIntoConstraints:NO];
+    self.title = _title;
     [self addSubview:titleLabel];
 
     actionButton = [UIButton new];
@@ -105,9 +108,14 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
     [actionButton setTranslatesAutoresizingMaskIntoConstraints:NO];
     [self addSubview:actionButton];
 
-    [self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:
-          @"H:|-24-[titleLabel]-24-[actionButton]-24-|"
-          options:0 metrics:nil views:@{@"titleLabel": titleLabel, @"actionButton": actionButton}]];
+    if(_pendingOptions[@"action"]){
+        [self addConstraints: [NSLayoutConstraint constraintsWithVisualFormat:
+                @"H:|-24-[titleLabel]-24-[actionButton]-24-|"
+                    options:0 metrics:nil views:@{@"titleLabel": titleLabel, @"actionButton": actionButton}]];
+    }else{
+        [self addConstraints: [NSLayoutConstraint constraintsWithVisualFormat:
+                @"H:|-24-[titleLabel]-24-|" options:0 metrics:nil views:@{@"titleLabel": titleLabel}]];
+    }
     [self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:[NSString stringWithFormat:@"V:|-%f-[titleLabel]-%f-|", topPadding, bottomPadding] options:0 metrics:nil views:@{@"titleLabel": titleLabel}]];
     [self addConstraint:[NSLayoutConstraint constraintWithItem:actionButton attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:titleLabel attribute:NSLayoutAttributeCenterY multiplier:1 constant:0]];
     [titleLabel setContentCompressionResistancePriority:250 forAxis:UILayoutConstraintAxisHorizontal];
@@ -119,6 +127,7 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
 
 -(void)setTitle:(NSString *)title {
     titleLabel.text = title;
+    [titleLabel sizeToFit];
 }
 
 -(void)setActionTitle:(NSString *)actionTitle {
@@ -151,7 +160,7 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
         self.transform = CGAffineTransformIdentity;
         titleLabel.alpha = 1;
         actionButton.alpha = 1;
-     } completion:^(BOOL finished) {
+    } completion:^(BOOL finished) {
         self.state = RNSnackBarViewStateDisplayed;
         NSTimeInterval interval;
         if ([duration doubleValue] <= 0) {
@@ -165,7 +174,7 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
                                                       selector:@selector(dismiss)
                                                       userInfo:nil
                                                        repeats:FALSE];
-     }];
+    }];
 }
 
 - (void)dismiss {
