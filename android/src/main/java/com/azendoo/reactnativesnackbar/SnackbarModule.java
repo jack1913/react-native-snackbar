@@ -2,7 +2,7 @@ package com.azendoo.reactnativesnackbar;
 
 import android.graphics.Color;
 import android.os.Build;
-import android.support.design.widget.Snackbar;
+import com.google.android.material.snackbar.Snackbar;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -63,8 +63,10 @@ public class SnackbarModule extends ReactContextBaseJavaModule{
             // The view is not focused, we should get all the modal views in the screen.
             ArrayList<View> modals = recursiveLoopChildren(view, new ArrayList<View>());
 
-            for (View modalViews : modals) {
-                displaySnackbar(modalViews, options, callback);
+            for (View modal : modals) {
+                if (modal == null) continue;
+
+                displaySnackbar(modal, options, callback);
             }
 
             return;
@@ -90,20 +92,20 @@ public class SnackbarModule extends ReactContextBaseJavaModule{
 
         Snackbar snackbar = Snackbar.make(view, title, duration);
         View snackbarView = snackbar.getView();
-        TextView snackbarText = (TextView) snackbarView.findViewById(android.support.design.R.id.snackbar_text);
-        snackbarText.setMaxLines(4);
+        TextView snackbarText = snackbarView.findViewById(com.google.android.material.R.id.snackbar_text);
+
         mActiveSnackbars.add(snackbar);
 
         // Set the background color.
         if (options.hasKey("backgroundColor")) {
-            snackbar.getView().setBackgroundColor(options.getInt("backgroundColor"));
+            snackbarView.setBackgroundColor(options.getInt("backgroundColor"));
         }
 
         if (options.hasKey("action")) {
             View.OnClickListener onClickListener = new View.OnClickListener() {
                 // Prevent double-taps which can lead to a crash.
                 boolean callbackWasCalled = false;
-                
+
                 @Override
                 public void onClick(View v) {
                     if (callbackWasCalled) return;
@@ -118,9 +120,9 @@ public class SnackbarModule extends ReactContextBaseJavaModule{
             snackbar.setActionTextColor(actionDetails.getInt("color"));
         }
 
-        // For older devices, explicitly set the text color; otherwise it may appear dark gray.
-        // http://stackoverflow.com/a/31084530/763231
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+        if (options.hasKey("color")) {
+            snackbarText.setTextColor(options.getInt("color"));
+        } else {
             snackbarText.setTextColor(Color.WHITE);
         }
 

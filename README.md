@@ -5,7 +5,7 @@
 [![npm version](https://img.shields.io/npm/v/react-native-snackbar.svg)](https://www.npmjs.com/package/react-native-snackbar)
 [![Latest GitHub tag](https://img.shields.io/github/tag/cooperka/react-native-snackbar.svg)](https://github.com/cooperka/react-native-snackbar)
 
-Material-design "Snackbar" component for Android and iOS:
+Material Design "Snackbar" component for Android and iOS.
 
 ![Snackbar screenshot](example/screenshots/snackbar.png)
 
@@ -19,8 +19,8 @@ and when to use them.
 
 ```js
 Snackbar.show({
-    title: 'Hello world',
-    duration: Snackbar.LENGTH_SHORT,
+  title: 'Hello world',
+  duration: Snackbar.LENGTH_SHORT,
 });
 ```
 
@@ -28,13 +28,13 @@ Or, to include an action button:
 
 ```js
 Snackbar.show({
-    title: 'Hello world',
-    duration: Snackbar.LENGTH_INDEFINITE,
-    action: {
-        title: 'UNDO',
-        color: 'green',
-        onPress: () => { /* Do something. */ },
-    },
+  title: 'Hello world',
+  duration: Snackbar.LENGTH_INDEFINITE,
+  action: {
+    title: 'UNDO',
+    color: 'green',
+    onPress: () => { /* Do something. */ },
+  },
 });
 ```
 
@@ -64,6 +64,7 @@ Snackbar.show({
 | `duration` | See below | `Snackbar.LENGTH_SHORT` | How long to display the Snackbar. |
 | `action` | `object` (described below) | `undefined` (no button) | Optional config for the action button (described below). |
 | `backgroundColor` | `string` or `style` | `undefined` (natively renders as black) | The background color for the whole Snackbar. |
+| `color` | `string` or `style` | `undefined` (natively renders as white) | The text color for the title. |
 
 Where `duration` can be one of the following (timing may vary based on device):
 
@@ -79,18 +80,34 @@ And the optional `action` object can contain the following options:
 | `onPress` | `function` | `undefined` (Snackbar is simply dismissed) | A callback for when the user taps the button. |
 | `color` | `string` or `style` | `undefined` (natively renders as white) | The text color for the button. |
 
-## Notes
+Note: the `title` will ellipsize after 2 lines of text on most platforms. See [#110](https://github.com/cooperka/react-native-snackbar/issues/110) if you need to display more lines.
 
-A few people have [suggested](https://github.com/cooperka/react-native-snackbar/issues/2)
-that the default Gradle configs created by `react-native init` are too outdated.
+## Troubleshooting
+
+#### Snackbar not appearing [Android]
+
+The Snackbar is designed to attach to whatever view is on top of your screen when `show` is called. If that view happens to be a temporary alert modal or some other view that goes away, you'll never see the Snackbar.
+
+A workaround in some cases is to use `setTimeout` to show the Snackbar a few seconds later after the modal is gone. See [issue #28](https://github.com/cooperka/react-native-snackbar/issues/28) for further discussion. If you want to submit a PR to improve the view-finding logic, feel free.
+
+#### Undefined import
+
+If you see errors similar to `Cannot read property 'LENGTH_LONG' of undefined` or `Undefined not an object (NativeModules.RNSnackbar)`, please refer to [issue #43](https://github.com/cooperka/react-native-snackbar/issues/43) for help.
+
+#### Compiling [Android]
+
 If you have issues compiling for Android after linking this library,
-please try upgrading Gradle to the latest version! For example:
+please try updating your Gradle and Android configs to the latest versions. For example:
 
 In your `android/build.gradle`:
 
-- `com.android.tools.build:gradle:2.2.2`
+- `com.android.tools.build:gradle:3.4.1` (or higher)
 
 In your `android/app/build.gradle`:
 
-- `compileSdkVersion 25`
-- `buildToolsVersion "25.0.2"`
+- `compileSdkVersion 28` (or higher)
+- `buildToolsVersion "28.0.3"` (or higher)
+
+#### Compiling [iOS]
+
+Make sure your Deployment Target is iOS 9.0 or above.

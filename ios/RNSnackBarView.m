@@ -23,12 +23,14 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
 {
     UILabel* titleLabel;
     UIButton* actionButton;
+    NSArray* horizontalLayoutConstraints;
     NSTimer* dismissTimer;
 }
 @property (nonatomic, strong) NSDictionary* pendingOptions;
 
 @property (nonatomic) RNSnackBarViewState state;
 @property (nonatomic, strong) NSString* title;
+@property (nonatomic, strong) UIColor* titleColor;
 @property (nonatomic, strong) NSString* actionTitle;
 @property (nonatomic, strong) UIColor* actionTitleColor;
 @property (nonatomic, strong) void (^pendingCallback)();
@@ -94,8 +96,9 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
     self.accessibilityIdentifier = @"snackbar";
 
     titleLabel = [UILabel new];
-    titleLabel.numberOfLines = 0;
-    titleLabel.textColor = [UIColor whiteColor];
+    titleLabel.text = _title;
+    titleLabel.numberOfLines = 4;
+    titleLabel.textColor = _titleColor;
     titleLabel.font = [UIFont boldSystemFontOfSize:14];
     [titleLabel setTranslatesAutoresizingMaskIntoConstraints:NO];
     self.title = _title;
@@ -108,14 +111,6 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
     [actionButton setTranslatesAutoresizingMaskIntoConstraints:NO];
     [self addSubview:actionButton];
 
-    if(_pendingOptions[@"action"]){
-        [self addConstraints: [NSLayoutConstraint constraintsWithVisualFormat:
-                @"H:|-24-[titleLabel]-24-[actionButton]-24-|"
-                    options:0 metrics:nil views:@{@"titleLabel": titleLabel, @"actionButton": actionButton}]];
-    }else{
-        [self addConstraints: [NSLayoutConstraint constraintsWithVisualFormat:
-                @"H:|-24-[titleLabel]-24-|" options:0 metrics:nil views:@{@"titleLabel": titleLabel}]];
-    }
     [self addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:[NSString stringWithFormat:@"V:|-%f-[titleLabel]-%f-|", topPadding, bottomPadding] options:0 metrics:nil views:@{@"titleLabel": titleLabel}]];
     [self addConstraint:[NSLayoutConstraint constraintWithItem:actionButton attribute:NSLayoutAttributeCenterY relatedBy:NSLayoutRelationEqual toItem:titleLabel attribute:NSLayoutAttributeCenterY multiplier:1 constant:0]];
     [titleLabel setContentCompressionResistancePriority:250 forAxis:UILayoutConstraintAxisHorizontal];
@@ -123,11 +118,31 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
     [actionButton setContentCompressionResistancePriority:750 forAxis:UILayoutConstraintAxisHorizontal];
     [actionButton setContentHuggingPriority:750 forAxis:UILayoutConstraintAxisHorizontal];
 
+    self.actionHidden = YES;
 }
 
 -(void)setTitle:(NSString *)title {
     titleLabel.text = title;
     [titleLabel sizeToFit];
+}
+
+-(void)setActionHidden:(BOOL)hidden {
+    if (actionButton.hidden != hidden || horizontalLayoutConstraints == nil) {
+        actionButton.hidden = hidden;
+        if (horizontalLayoutConstraints != nil) {
+            [self removeConstraints:horizontalLayoutConstraints];
+        }
+        if (hidden) {
+            horizontalLayoutConstraints = [NSLayoutConstraint constraintsWithVisualFormat:@"H:|-24-[titleLabel]-24-|" options:0 metrics:nil views:@{@"titleLabel": titleLabel}];
+        } else {
+            horizontalLayoutConstraints = [NSLayoutConstraint constraintsWithVisualFormat:@"H:|-24-[titleLabel]-24-[actionButton]-24-|" options:0 metrics:nil views:@{@"titleLabel": titleLabel, @"actionButton": actionButton}];
+        }
+        [self addConstraints:horizontalLayoutConstraints];
+    }
+}
+
+-(void)setTitleColor:(UIColor *)titleColor {
+    titleLabel.textColor = titleColor;
 }
 
 -(void)setActionTitle:(NSString *)actionTitle {
@@ -194,28 +209,44 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
 
 - (void)show {
     if (self.state == RNSnackBarViewStateDisplayed || self.state == RNSnackBarViewStatePresenting) {
-      [self dismiss];
-      return;
+        [self dismiss];
+        return;
     }
     if (self.state == RNSnackBarViewStateDismissing) {
-      return;
+        return;
     }
-    if (!_pendingOptions) { return; }
+    if (!_pendingOptions) {
+        return;
+    }
 
     id backgroundColor = _pendingOptions[@"backgroundColor"];
+    self.backgroundColor = backgroundColor
+        ? [RCTConvert UIColor:backgroundColor]
+        : [UIColor colorWithRed:0.196078F green:0.196078F blue:0.196078F alpha:1.0F];
 
-    self.backgroundColor = backgroundColor ? [RCTConvert UIColor:backgroundColor] : [UIColor colorWithRed:0.196078F green:0.196078F blue:0.196078F alpha:1.0F];
+    id titleColor =_pendingOptions[@"color"];
+    self.titleColor = titleColor
+        ? [RCTConvert UIColor:titleColor]
+        : [UIColor whiteColor];
+
     self.title = _pendingOptions[@"title"];
     self.callback = _pendingCallback;
+
     NSDictionary* action = _pendingOptions[@"action"];
     if (action) {
         self.actionTitle = _pendingOptions[@"action"][@"title"];
+        self.actionHidden = _pendingOptions[@"action"][@"title"] ? NO : YES;
         NSNumber* color = _pendingOptions[@"action"][@"color"];
         self.actionTitleColor = [RCTConvert UIColor:color];
     } else {
         self.actionTitle = @"";
+        self.actionHidden = YES;
     }
-    NSNumber* duration = _pendingOptions[@"duration"] ? (NSNumber*)_pendingOptions[@"duration"] : @(-1);
+
+    NSNumber* duration = _pendingOptions[@"duration"]
+        ? (NSNumber*)_pendingOptions[@"duration"]
+        : @(-1);
+
     [self presentWithDuration:duration];
 }
 
