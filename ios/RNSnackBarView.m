@@ -26,6 +26,7 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
     NSArray* horizontalLayoutConstraints;
     NSTimer* dismissTimer;
 }
+
 @property (nonatomic, strong) NSDictionary* pendingOptions;
 
 @property (nonatomic) RNSnackBarViewState state;
@@ -35,6 +36,68 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
 @property (nonatomic, strong) UIColor* actionTitleColor;
 @property (nonatomic, strong) void (^pendingCallback)();
 @property (nonatomic, strong) void (^callback)();
+
+@end
+
+@interface KeyboardStateListener : NSObject {
+    BOOL _isVisible;
+    float _keyboardHeight;
+}
++ (KeyboardStateListener *)sharedInstance;
+@property (nonatomic, readonly, getter=isVisible) BOOL visible;
+@property (nonatomic, readonly, getter=getKeyboardHeight) float keyboardHeight;
+@end
+
+static KeyboardStateListener *sharedInstance;
+
+@implementation KeyboardStateListener
+
++ (KeyboardStateListener *)sharedInstance
+{
+    return sharedInstance;
+}
+
++ (void)load
+{
+    @autoreleasepool {
+        sharedInstance = [[self alloc] init];
+    }
+}
+
+- (BOOL)isVisible
+{
+    return _isVisible;
+}
+
+- (float)getKeyboardHeight
+{
+    return _keyboardHeight;
+}
+
+- (void)willShow:(NSNotification *) notification
+{
+    NSDictionary *info  = notification.userInfo;
+    NSValue      *value = info[UIKeyboardFrameEndUserInfoKey];
+
+    CGRect rawFrame = [value CGRectValue];
+    _keyboardHeight = rawFrame.size.height;
+    _isVisible = YES;
+}
+
+- (void)didHide
+{
+    _isVisible = NO;
+}
+
+- (id)init
+{
+    if ((self = [super init])) {
+        NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
+        [center addObserver:self selector:@selector(willShow:) name:UIKeyboardWillShowNotification object:nil];
+        [center addObserver:self selector:@selector(didHide) name:UIKeyboardWillHideNotification object:nil];
+    }
+    return self;
+}
 
 @end
 
@@ -71,14 +134,31 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
 
 - (instancetype)init
 {
-
+    [[NSNotificationCenter defaultCenter] addObserver:self
+    selector:@selector(keyboardWillShow:)
+    name:UIKeyboardWillShowNotification
+    object:nil];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+    selector:@selector(keyboardWillHide:)
+    name:UIKeyboardWillHideNotification
+    object:nil];
+    
     self = [super initWithFrame:CGRectMake(0, [UIScreen mainScreen].bounds.size.height - 48, [UIScreen mainScreen].bounds.size.width, 48)];
-    //self = [super initWithFrame:CGRectMake(0, [UIScreen mainScreen].bounds.size.height, [UIScreen mainScreen].bounds.size.width, 48)];
-
     if (self) {
         [self buildView];
     }
     return self;
+}
+
+- (void) keyboardWillShow:(NSNotification *) notification
+{
+    self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y - sharedInstance.getKeyboardHeight, self.frame.size.width, self.frame.size.height);
+}
+
+- (void) keyboardWillHide:(NSNotification *) notification
+{
+    self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y + sharedInstance.getKeyboardHeight, self.frame.size.width, self.frame.size.height);
 }
 
 - (void)buildView {
@@ -101,7 +181,6 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
     titleLabel.textColor = _titleColor;
     titleLabel.font = [UIFont boldSystemFontOfSize:14];
     [titleLabel setTranslatesAutoresizingMaskIntoConstraints:NO];
-    self.title = _title;
     [self addSubview:titleLabel];
 
     actionButton = [UIButton new];
@@ -117,13 +196,11 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
     [titleLabel setContentHuggingPriority:250 forAxis:UILayoutConstraintAxisHorizontal];
     [actionButton setContentCompressionResistancePriority:750 forAxis:UILayoutConstraintAxisHorizontal];
     [actionButton setContentHuggingPriority:750 forAxis:UILayoutConstraintAxisHorizontal];
-
     self.actionHidden = YES;
 }
 
 -(void)setTitle:(NSString *)title {
     titleLabel.text = title;
-    [titleLabel sizeToFit];
 }
 
 -(void)setActionHidden:(BOOL)hidden {
@@ -164,7 +241,8 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
     UIWindow* keyWindow = [UIApplication sharedApplication].keyWindow;
     [keyWindow addSubview:self];
     [self setTranslatesAutoresizingMaskIntoConstraints:false];
-    [keyWindow addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:[self(>=48)]|" options:0 metrics:nil views:@{@"self": self}]];
+    [keyWindow addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:[self(>=48)]-keyboardHeight-|" options:0 metrics:@{@"keyboardHeight":@(sharedInstance.isVisible ? sharedInstance.getKeyboardHeight : 0)} views:@{@"self": self}]];
+    
     [keyWindow addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|[self]|" options:0 metrics:nil views:@{@"self": self}]];
 
     self.transform = CGAffineTransformMakeTranslation(0, self.bounds.size.height);
@@ -175,7 +253,7 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
         self.transform = CGAffineTransformIdentity;
         titleLabel.alpha = 1;
         actionButton.alpha = 1;
-    } completion:^(BOOL finished) {
+     } completion:^(BOOL finished) {
         self.state = RNSnackBarViewStateDisplayed;
         NSTimeInterval interval;
         if ([duration doubleValue] <= 0) {
@@ -189,7 +267,7 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
                                                       selector:@selector(dismiss)
                                                       userInfo:nil
                                                        repeats:FALSE];
-    }];
+     }];
 }
 
 - (void)dismiss {
@@ -246,7 +324,7 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
     NSNumber* duration = _pendingOptions[@"duration"]
         ? (NSNumber*)_pendingOptions[@"duration"]
         : @(-1);
-
+    
     [self presentWithDuration:duration];
 }
 
