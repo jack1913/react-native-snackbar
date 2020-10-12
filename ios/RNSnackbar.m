@@ -36,6 +36,7 @@ RCT_EXPORT_METHOD(dismiss)
 
 - (NSDictionary *)constantsToExport
 {
+    [RNSnackBarView initializeSnackbar];
     return @{
              @"LENGTH_INDEFINITE": @-2,
              @"LENGTH_LONG": @0,

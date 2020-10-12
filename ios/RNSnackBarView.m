@@ -44,7 +44,7 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
     float _keyboardHeight;
 }
 + (KeyboardStateListener *)sharedInstance;
-@property (nonatomic, readonly, getter=isVisible) BOOL visible;
+@property (nonatomic) BOOL visible;
 @property (nonatomic, readonly, getter=getKeyboardHeight) float keyboardHeight;
 @end
 
@@ -64,11 +64,6 @@ static KeyboardStateListener *sharedInstance;
     }
 }
 
-- (BOOL)isVisible
-{
-    return _isVisible;
-}
-
 - (float)getKeyboardHeight
 {
     return _keyboardHeight;
@@ -81,12 +76,6 @@ static KeyboardStateListener *sharedInstance;
 
     CGRect rawFrame = [value CGRectValue];
     _keyboardHeight = rawFrame.size.height;
-    _isVisible = YES;
-}
-
-- (void)didHide
-{
-    _isVisible = NO;
 }
 
 - (id)init
@@ -94,7 +83,6 @@ static KeyboardStateListener *sharedInstance;
     if ((self = [super init])) {
         NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
         [center addObserver:self selector:@selector(willShow:) name:UIKeyboardWillShowNotification object:nil];
-        [center addObserver:self selector:@selector(didHide) name:UIKeyboardWillHideNotification object:nil];
     }
     return self;
 }
@@ -120,6 +108,10 @@ static KeyboardStateListener *sharedInstance;
     return sharedSnackBar;
 }
 
++ (void) initializeSnackbar {
+    RNSnackBarView *snackBar = [RNSnackBarView sharedSnackBar];
+}
+
 + (void)showWithOptions:(NSDictionary *)options andCallback:(void (^)())callback {
     RNSnackBarView *snackBar = [RNSnackBarView sharedSnackBar];
     snackBar.pendingOptions = options;
@@ -139,6 +131,13 @@ static KeyboardStateListener *sharedInstance;
     name:UIKeyboardWillShowNotification
     object:nil];
     
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+    selector:@selector(keyboardDidShow:)
+    name:UIKeyboardDidShowNotification
+    object:nil];
+    
+    
     [[NSNotificationCenter defaultCenter] addObserver:self
     selector:@selector(keyboardWillHide:)
     name:UIKeyboardWillHideNotification
@@ -153,11 +152,31 @@ static KeyboardStateListener *sharedInstance;
 
 - (void) keyboardWillShow:(NSNotification *) notification
 {
+    if(sharedInstance.visible){
+        return;
+    }
+    
+    sharedInstance.visible = true;
+    self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y - sharedInstance.getKeyboardHeight, self.frame.size.width, self.frame.size.height);
+}
+
+- (void) keyboardDidShow:(NSNotification *) notification
+{
+    if(sharedInstance.visible){
+        return;
+    }
+    
+    sharedInstance.visible = true;
     self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y - sharedInstance.getKeyboardHeight, self.frame.size.width, self.frame.size.height);
 }
 
 - (void) keyboardWillHide:(NSNotification *) notification
 {
+    if (sharedInstance.visible == false) {
+        return;
+    }
+    
+    sharedInstance.visible = false;
     self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y + sharedInstance.getKeyboardHeight, self.frame.size.width, self.frame.size.height);
 }
 
@@ -241,7 +260,7 @@ static KeyboardStateListener *sharedInstance;
     UIWindow* keyWindow = [UIApplication sharedApplication].keyWindow;
     [keyWindow addSubview:self];
     [self setTranslatesAutoresizingMaskIntoConstraints:false];
-    [keyWindow addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:[self(>=48)]-keyboardHeight-|" options:0 metrics:@{@"keyboardHeight":@(sharedInstance.isVisible ? sharedInstance.getKeyboardHeight : 0)} views:@{@"self": self}]];
+    [keyWindow addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:[self(>=48)]-keyboardHeight-|" options:0 metrics:@{@"keyboardHeight":@(sharedInstance.visible ? sharedInstance.getKeyboardHeight : 0)} views:@{@"self": self}]];
     
     [keyWindow addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|[self]|" options:0 metrics:nil views:@{@"self": self}]];
 
