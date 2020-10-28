@@ -46,6 +46,7 @@ static const NSTimeInterval ANIMATION_DURATION = 0.250;
 + (KeyboardStateListener *)sharedInstance;
 @property (nonatomic) BOOL visible;
 @property (nonatomic, readonly, getter=getKeyboardHeight) float keyboardHeight;
+@property (nonatomic, readonly, getter=getSafeAreaBottomInsets) float safeAreaBottomInsets;
 @end
 
 static KeyboardStateListener *sharedInstance;
@@ -67,6 +68,14 @@ static KeyboardStateListener *sharedInstance;
 - (float)getKeyboardHeight
 {
     return _keyboardHeight;
+}
+
+- (float)getSafeAreaBottomInsets
+{
+    if (@available(iOS 11.0, *)) {
+        return UIApplication.sharedApplication.keyWindow.safeAreaInsets.bottom;
+    }
+    return 0;
 }
 
 - (void)willShow:(NSNotification *) notification
@@ -131,13 +140,6 @@ static KeyboardStateListener *sharedInstance;
     name:UIKeyboardWillShowNotification
     object:nil];
     
-    
-    [[NSNotificationCenter defaultCenter] addObserver:self
-    selector:@selector(keyboardDidShow:)
-    name:UIKeyboardDidShowNotification
-    object:nil];
-    
-    
     [[NSNotificationCenter defaultCenter] addObserver:self
     selector:@selector(keyboardWillHide:)
     name:UIKeyboardWillHideNotification
@@ -157,17 +159,8 @@ static KeyboardStateListener *sharedInstance;
     }
     
     sharedInstance.visible = true;
-    self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y - sharedInstance.getKeyboardHeight, self.frame.size.width, self.frame.size.height);
-}
 
-- (void) keyboardDidShow:(NSNotification *) notification
-{
-    if(sharedInstance.visible){
-        return;
-    }
-    
-    sharedInstance.visible = true;
-    self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y - sharedInstance.getKeyboardHeight, self.frame.size.width, self.frame.size.height);
+    self.frame = CGRectMake(self.frame.origin.x, self.frame.origin.y - (sharedInstance.getKeyboardHeight + sharedInstance.getSafeAreaBottomInsets), self.frame.size.width, self.frame.size.height);
 }
 
 - (void) keyboardWillHide:(NSNotification *) notification
